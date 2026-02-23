@@ -1,0 +1,100 @@
+name: touchbase_flutter
+description: "TouchBase - Rotary Organization Management App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Networking
+  http: ^1.3.0
+
+  # State Management
+  provider: ^6.1.2
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Storage
+  shared_preferences: ^2.3.4
+  flutter_secure_storage: ^9.2.4
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+
+  # Connectivity
+  connectivity_plus: ^6.1.4
+
+  # Image & Caching
+  cached_network_image: ^3.4.1
+
+  # Firebase
+  firebase_core: ^3.12.1
+  firebase_analytics: ^11.4.4
+  firebase_messaging: ^15.2.4
+
+  # Maps
+  google_maps_flutter: ^2.12.1
+
+  # Media
+  image_picker: ^1.1.2
+  share_plus: ^10.1.4
+  photo_view: ^0.15.0
+
+  # URL & WebView
+  url_launcher: ^6.3.1
+  webview_flutter: ^4.10.0
+
+  # UI Components
+  carousel_slider: ^5.0.0
+  table_calendar: ^3.1.3
+  fl_chart: ^0.70.2
+  percent_indicator: ^4.2.3
+  fluttertoast: ^8.2.10
+  flutter_easyloading: ^3.0.5
+
+  # Device Info
+  device_info_plus: ^11.3.0
+  package_info_plus: ^8.3.0
+
+  # Utils
+  intl: ^0.20.2
+  json_annotation: ^4.9.0
+  permission_handler: ^11.3.1
+
+  # PDF & Archive
+  flutter_pdfview: ^1.4.0
+  pdf: ^3.11.1
+  archive: ^4.0.4
+
+  # Calendar
+  device_calendar: ^4.3.3
+  flutter_local_notifications: ^18.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  json_serializable: ^6.9.4
+  build_runner: ^2.4.14
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

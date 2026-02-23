@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "350439407119",
+    "project_id": "imaeindia-android-app",
+    "storage_bucket": "imaeindia-android-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350439407119:android:a94ce3648243346d4ded7a",
+        "android_client_info": {
+          "package_name": "com.imeindia.imeapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "350439407119-d43rtlek3lsc23f7s2a7ergq1ra47mea.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCxza2WAaIQQ645lovOiA3Apa07fmkhOA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "350439407119-d43rtlek3lsc23f7s2a7ergq1ra47mea.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "350439407119-dft1qp7bahp0bedb61td011k4enhdnnk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.imei.imeiConnect"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
