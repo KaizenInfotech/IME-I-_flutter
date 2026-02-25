@@ -188,7 +188,7 @@ const _modules = [
     assetPath: 'assets/images/announce.png',
   ),
   _BranchModule(
-    label: 'Past Chairmen',
+    label: 'Past Chairman',
     assetPath: 'assets/images/pastchair.png',
   ),
   _BranchModule(

@@ -14,12 +14,20 @@ import 'src/features/notifications/providers/notifications_provider.dart';
 
 /// Android: MyFirebaseMessagingService.onMessageReceived — background handler.
 /// Must be a top-level function (not a class method).
+/// IMPORTANT: On Android this runs in a SEPARATE Dart isolate — Flutter
+/// binding and all plugins must be initialized from scratch.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Critical: initialize Flutter binding FIRST — without this, all plugin
+  // platform channel calls (sqflite, flutter_local_notifications, etc.)
+  // fail silently on Android's background isolate. iOS runs on main isolate
+  // so it works without this, but Android does NOT.
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await DatabaseHelper.instance.init();
 
   debugPrint('FCM background message: ${message.messageId}');
+  debugPrint('FCM background data: ${message.data}');
+  debugPrint('FCM background notification: ${message.notification?.title} / ${message.notification?.body}');
 
   // Build payload from data fields (server push) or notification fields (Firebase Console test)
   Map<String, dynamic> payload = {};
@@ -35,32 +43,48 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 
   payload['gcm.message_id'] ??=
-      message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString();
+      message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString();  
 
-  if (payload.isNotEmpty) {
+  if (payload.isEmpty) return;
+
+  // Save notification to local DB (non-critical — don't let DB failure block notification display)
+  try {
+    await DatabaseHelper.instance.init();
     final provider = NotificationsProvider();
     await provider.handlePushNotification(payload);
+  } catch (e) {
+    debugPrint('FCM background: DB save failed (non-fatal): $e');
+  }
 
-    // Show local notification banner only for DATA-ONLY messages.
-    // When message.notification is present, the OS (both Android & iOS)
-    // automatically displays a notification banner in background/terminated
-    // state — showing another local notification would cause duplicates.
-    if (message.notification == null) {
-      final title = payload['title']?.toString() ??
-          payload['eventTitle']?.toString() ??
-          payload['entityName']?.toString() ??
-          'TouchBase';
-      final body = payload['Message']?.toString() ??
-          payload['eventDesc']?.toString() ??
-          '';
-      if (body.isNotEmpty) {
-        await LocalNotificationService.instance.init();
-        await LocalNotificationService.instance.showNotification(
-          title: title,
-          body: body,
-          data: payload,
-        );
-      }
+  // Always init LocalNotificationService — creates the Android notification
+  // channel (IME(I)-iConnect) which must exist for system-displayed notifications.
+  try {
+    await LocalNotificationService.instance.init();
+  } catch (e) {
+    debugPrint('FCM background: LocalNotificationService init failed: $e');
+  }
+
+  // Show local notification banner.
+  // For data-only messages: the OS does NOT auto-display, so we must show it.
+  // For notification+data messages: the OS auto-displays on Android, but only
+  // if the notification channel exists and icon is valid — show as fallback
+  // to guarantee the user sees the notification.
+  final title = payload['title']?.toString() ??
+      payload['eventTitle']?.toString() ??
+      payload['entityName']?.toString() ??
+      'TouchBase';
+  final body = payload['Message']?.toString() ??
+      payload['eventDesc']?.toString() ??
+      '';
+  if (body.isNotEmpty) {
+    try {
+      await LocalNotificationService.instance.showNotification(
+        title: title,
+        body: body,
+        data: payload,
+      );
+    } catch (e) {
+      debugPrint('FCM background: show notification failed: $e');
     }
   }
 }
@@ -93,7 +117,7 @@ void main() async {
       alert: true,
       badge: true,
       sound: true,
-      provisional: false,
+      provisional: false,  
     );
 
     // iOS: show notification banners even when app is in foreground

@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/constants/api_constants.dart';
@@ -179,6 +181,52 @@ class GroupProvider extends ChangeNotifier {
       debugPrint('GroupProvider.updateGroupCategory error: $e');
     }
     return false;
+  }
+
+  // ─── SESSION EXPIRY CHECK ─────────────────────────────
+  // Android: DashboardActivity.checkForUpdate() → GetGetAllGroupListSync
+  // Returns response status: "0" = success, "2" = session expired
+  Future<String?> checkSessionExpired() async {
+    final masterUid = LocalStorage.instance.masterUid;
+    if (masterUid == null || masterUid.isEmpty) return null;
+
+    try {
+      final deviceId = await _getDeviceId();
+      final response = await ApiClient.instance.post(
+        ApiConstants.groupGetAllGroupListSync,
+        body: {
+          'masterUID': masterUid,
+          'imeiNo': deviceId,
+          'loginType': LocalStorage.instance.sessionLoginType ?? '0',
+          'mobileNo': LocalStorage.instance.sessionMobileNumber ?? '',
+          'countryCode': '1',
+          'updatedOn': LocalStorage.instance.sessionLastUpdateDate ?? '',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = _parseResponseBody(response.body);
+        return data?['status']?.toString();
+      }
+    } catch (e) {
+      debugPrint('GroupProvider.checkSessionExpired error: $e');
+    }
+    return null;
+  }
+
+  /// Android: Settings.Secure.ANDROID_ID / iOS: identifierForVendor
+  Future<String> _getDeviceId() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor ?? '';
+      } else if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id;
+      }
+    } catch (_) {}
+    return '';
   }
 
   // ─── CLEAR STATE ───────────────────────────────────────

@@ -43,6 +43,19 @@ class LocalStorage {
   /// Clear all stored data (used on logout).
   Future<bool> clear() async => await _prefs?.clear() ?? false;
 
+  /// Android: sessionExpiredPopup clears specific keys on session expiry.
+  /// Clears the 6 Android preferences + auth tokens so GoRouter redirects to login.
+  Future<void> clearSessionData() async {
+    await remove(AppConstants.keyGroupId);        // GROUP_ID
+    await remove(AppConstants.keyGrpProfileId);   // GRP_PROFILE_ID
+    await remove(AppConstants.keyIsGrpAdmin);     // IS_GRP_ADMIN
+    await remove(AppConstants.keyClubName);       // GROUP_NAME
+    await remove(AppConstants.keyMasterUid);      // MASTER_USER_ID
+    await remove(AppConstants.keyIsAdmin);        // IS_AG
+    await remove(AppConstants.keyAuthProfileId);
+    await remove(AppConstants.keyAuthGroupId);
+  }
+
   // ─── PRIMARY USER IDENTITY ────────────────────────────
   // Mapped from iOS UserDefaults keys
 

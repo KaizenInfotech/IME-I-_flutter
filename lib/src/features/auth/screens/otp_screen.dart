@@ -199,142 +199,147 @@ class _OtpScreenState extends State<OtpScreen> {
                   ],
                 ),
               ),
-              const Spacer(flex: 2),
-              // OTP card
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.black.withValues(alpha: 0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // "OTP" header with purple bg
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(12),
+              // Scrollable content — adapts to small screens and keyboard
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                AppColors.black.withValues(alpha: 0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        child: const Text(
-                          'OTP',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textOnPrimary,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                        child: Column(
-                          children: [
-                            // "OTP Verification" in blue
-                            const Text(
-                              'OTP Verification',
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryBlue,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // "OTP" header with purple bg
+                          Container(
+                            width: double.infinity,
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(12),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            // Countdown timer text
-                            if (_countdown > 0)
-                              Text(
-                                _countdownText,
-                                style: const TextStyle(
-                                  fontFamily: AppTextStyles.fontFamily,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColors.textSecondary,
-                                ),
-                                textAlign: TextAlign.center,
+                            child: const Text(
+                              'OTP',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textOnPrimary,
+                                letterSpacing: 1.2,
                               ),
-                            const SizedBox(height: 16),
-                            // OTP input with key icon and C-O-D-E placeholders
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                            child: Column(
                               children: [
-                                // Key icon
+                                // "OTP Verification" in blue
+                                const Text(
+                                  'OTP Verification',
+                                  style: TextStyle(
+                                    fontFamily: AppTextStyles.fontFamily,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryBlue,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // Countdown timer text
+                                if (_countdown > 0)
+                                  Text(
+                                    _countdownText,
+                                    style: const TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                const SizedBox(height: 16),
+                                // Key icon above the OTP fields
                                 const Icon(
                                   Icons.vpn_key,
                                   color: AppColors.textSecondary,
                                   size: 24,
                                 ),
-                                const SizedBox(width: 12),
-                                // OTP fields
+                                const SizedBox(height: 12),
+                                // OTP input fields — responsive width via Expanded
                                 OtpInputField(
                                   key: _otpFieldKey,
                                   length: 4,
                                   onCompleted: _onOtpCompleted,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            // "Did not receive the SMS" text
-                            const Text(
-                              'Did not receive the SMS',
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // "Resend" button with purple border
-                            SizedBox(
-                              width: 140,
-                              height: 40,
-                              child: OutlinedButton(
-                                onPressed:
-                                    _countdown <= 0 ? _resendOtp : null,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: BorderSide(
-                                    color: _countdown <= 0
-                                        ? AppColors.primary
-                                        : AppColors.grayMedium,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Resend',
+                                const SizedBox(height: 20),
+                                // "Did not receive the SMS" text
+                                const Text(
+                                  'Did not receive the SMS',
                                   style: TextStyle(
                                     fontFamily: AppTextStyles.fontFamily,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppColors.textSecondary,
                                   ),
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                // "Resend" button with purple border
+                                SizedBox(
+                                  width: 140,
+                                  height: 40,
+                                  child: OutlinedButton(
+                                    onPressed: _countdown <= 0
+                                        ? _resendOtp
+                                        : null,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      side: BorderSide(
+                                        color: _countdown <= 0
+                                            ? AppColors.primary
+                                            : AppColors.grayMedium,
+                                        width: 1.5,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Resend',
+                                      style: TextStyle(
+                                        fontFamily:
+                                            AppTextStyles.fontFamily,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-              const Spacer(flex: 4),
             ],
           ),
         ),

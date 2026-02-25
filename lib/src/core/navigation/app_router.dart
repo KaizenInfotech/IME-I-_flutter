@@ -657,7 +657,7 @@ class AppRouter {
               final e = _extra(state);
               return PastPresidentsScreen(
                 groupId: e['groupId'] as String? ?? '',
-                moduleName: 'Past Chairmen',
+                moduleName: 'Past Chairman',
               );
             },
           ),

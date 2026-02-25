@@ -326,6 +326,15 @@ class AuthProvider extends ChangeNotifier {
       authProfileId: s.memberProfileId?.toString(),
       authGroupId: s.grpid1,
     );
+
+    // Save session mobile number and login type for session expiry check
+    // Android: PreferenceManager stores MOBILE_NUMBER and LOGIN_TYPE at login
+    if (_mobileNumber != null && _mobileNumber!.isNotEmpty) {
+      await LocalStorage.instance.setSessionMobileNumber(_mobileNumber!);
+    }
+    if (_loginType != null && _loginType!.isNotEmpty) {
+      await LocalStorage.instance.setSessionLoginType(_loginType!);
+    }
   }
 
   /// Public method to save selected group from welcome screen.

@@ -536,6 +536,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   'MemberShip Grade',
                   data['Membership_Grade']?.toString(),
                 ),
+                _buildDetailRow(
+                  'Category',
+                  data['CategoryName']?.toString(),
+                ),
 
                 // Mobile with Hide/Show toggle
                 _buildToggleRow(

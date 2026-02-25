@@ -186,9 +186,19 @@ class CelebrationEvent extends BaseModel {
           json['EmailIds'], CelebrationEmailItem.fromJson),
       mobileNos: BaseModel.safeList(
           json['MobileNo'], CelebrationMobileItem.fromJson),
-      hideWhatsnum: BaseModel.safeString(json['hide_whatsnum']),
-      hideNum: BaseModel.safeString(json['hide_num']),
-      hideMail: BaseModel.safeString(json['hide_mail']),
+      // Try multiple key variations: snake_case, camelCase, PascalCase
+      hideWhatsnum: BaseModel.safeString(json['hide_whatsnum'] ??
+          json['hideWhatsnum'] ??
+          json['HideWhatsnum'] ??
+          json['Hide_whatsnum']),
+      hideNum: BaseModel.safeString(json['hide_num'] ??
+          json['hideNum'] ??
+          json['HideNum'] ??
+          json['Hide_num']),
+      hideMail: BaseModel.safeString(json['hide_mail'] ??
+          json['hideMail'] ??
+          json['HideMail'] ??
+          json['Hide_mail']),
       description: BaseModel.safeString(json['Description']),
       eventTitle: BaseModel.safeString(json['eventTitle']),
       eventImg: BaseModel.safeString(json['eventImg']),
@@ -262,7 +272,7 @@ class CelebrationEvent extends BaseModel {
     if (hideWhatsnum != null || hideNum != null) {
       return hideWhatsnum == '1' || hideNum == '1';
     }
-    if (mobileNos != null) return mobileNos!.isNotEmpty;
+    if (mobileNos != null && mobileNos!.isNotEmpty) return true;
     return contactNumber != null && contactNumber!.isNotEmpty;
   }
 
@@ -270,7 +280,7 @@ class CelebrationEvent extends BaseModel {
   /// Checks hide flag first, then EmailIds array, then EmailId fallback.
   bool get hasEmail {
     if (hideMail != null) return hideMail == '1';
-    if (emailIds != null) return emailIds!.isNotEmpty;
+    if (emailIds != null && emailIds!.isNotEmpty) return true;
     return emailId != null && emailId!.isNotEmpty;
   }
 

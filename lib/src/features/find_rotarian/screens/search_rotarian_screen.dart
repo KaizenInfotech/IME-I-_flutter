@@ -57,7 +57,7 @@ class _SearchRotarianScreenState extends State<SearchRotarianScreen> {
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'Search by name or club...',
+                hintText: 'Search by name',
                 hintStyle: AppTextStyles.body2.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -100,7 +100,7 @@ class _SearchRotarianScreenState extends State<SearchRotarianScreen> {
                 if (list.isEmpty) {
                   return EmptyStateWidget(
                     icon: Icons.person_search,
-                    message: 'No rotarians found',
+                    message: 'No member found',
                   );
                 }
 

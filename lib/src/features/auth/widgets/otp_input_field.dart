@@ -96,33 +96,41 @@ class OtpInputFieldState extends State<OtpInputField> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(widget.length, (index) {
-        return Container(
-          width: 50,
-          height: 50,
-          margin: const EdgeInsets.symmetric(horizontal: 6),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: _controllers[index].text.isNotEmpty
-                  ? AppColors.primary
-                  : AppColors.gray,
-              width: 1,
+        final isFirst = index == 0;
+        return Expanded(
+          child: Container(
+            height: 48,
+            margin: EdgeInsets.only(left: isFirst ? 0 : 8),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _controllers[index].text.isNotEmpty
+                    ? AppColors.primary
+                    : AppColors.gray,
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(10),
             ),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: TextField(
-            controller: _controllers[index],
-            focusNode: _focusNodes[index],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            style: AppTextStyles.heading3,
-            decoration: const InputDecoration(
-              counterText: '',
-              border: InputBorder.none,
+            child: TextField(
+              controller: _controllers[index],
+              focusNode: _focusNodes[index],
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              maxLength: 1,
+              style: const TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) => _onChanged(index, value),
+              onTap: () => _onTap(index),
             ),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (value) => _onChanged(index, value),
-            onTap: () => _onTap(index),
           ),
         );
       }),

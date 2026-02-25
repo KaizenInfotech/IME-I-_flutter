@@ -199,9 +199,21 @@ class CelebrationsProvider extends ChangeNotifier {
         final rawEvents = (rawResult['Result']
             as Map<String, dynamic>?)?['Events'] as List?;
         if (rawEvents != null && rawEvents.isNotEmpty) {
+          final firstEvent = rawEvents.first as Map;
           debugPrint(
-              'celebrations raw event[0] keys: ${(rawEvents.first as Map).keys.toList()}');
-          debugPrint('celebrations raw event[0]: ${rawEvents.first}');
+              'celebrations raw event[0] keys: ${firstEvent.keys.toList()}');
+          debugPrint('celebrations raw event[0]: $firstEvent');
+          // Specifically log hide flags and contact fields for debugging
+          debugPrint(
+              'celebrations hide flags: hide_whatsnum=${firstEvent['hide_whatsnum']}, '
+              'hide_num=${firstEvent['hide_num']}, hide_mail=${firstEvent['hide_mail']}, '
+              'hideWhatsnum=${firstEvent['hideWhatsnum']}, hideNum=${firstEvent['hideNum']}, '
+              'hideMail=${firstEvent['hideMail']}');
+          debugPrint(
+              'celebrations contact: MobileNo=${firstEvent['MobileNo']}, '
+              'EmailIds=${firstEvent['EmailIds']}, '
+              'ContactNumber=${firstEvent['ContactNumber']}, '
+              'EmailId=${firstEvent['EmailId']}');
         }
 
         final result = TBEventListTypeResult.fromJson(rawResult);
@@ -279,6 +291,48 @@ class CelebrationsProvider extends ChangeNotifier {
       }
       return event;
     }).toList();
+  }
+
+  /// Apply current user's hide flags from LocalStorage to BirthdayItem list.
+  /// Same logic as _applyCurrentUserHideFlags but for TodaysBirthdayResult.
+  void _applyCurrentUserHideFlagsToBirthdays() {
+    if (_todaysBirthday?.birthdays == null) return;
+
+    final storage = LocalStorage.instance;
+    final masterUid = storage.masterUid ?? '';
+    final memberProfileId = storage.memberProfileId ?? '';
+    final hideWhatsnum = storage.getString('hide_whatsnum');
+    final hideNum = storage.getString('hide_num');
+    final hideMail = storage.getString('hide_mail');
+
+    if (hideWhatsnum == null && hideNum == null && hideMail == null) return;
+    if (masterUid.isEmpty && memberProfileId.isEmpty) return;
+
+    final idsToMatch = <String>{};
+    if (masterUid.isNotEmpty) {
+      idsToMatch.add(masterUid);
+      idsToMatch.add('M$masterUid');
+    }
+    if (memberProfileId.isNotEmpty) {
+      idsToMatch.add(memberProfileId);
+      idsToMatch.add('M$memberProfileId');
+    }
+
+    _todaysBirthday = TodaysBirthdayResult(
+      status: _todaysBirthday!.status,
+      message: _todaysBirthday!.message,
+      birthdays: _todaysBirthday!.birthdays!.map((item) {
+        final id = item.profileId;
+        if (id != null && id.isNotEmpty && idsToMatch.contains(id)) {
+          return item.withHideFlags(
+            hideWhatsnum: hideWhatsnum ?? '1',
+            hideNum: hideNum ?? '1',
+            hideMail: hideMail ?? '1',
+          );
+        }
+        return item;
+      }).toList(),
+    );
   }
 
   // ─── POST Celebrations/GetMonthEventListDetails_National → day-wise details ──
@@ -387,6 +441,9 @@ class CelebrationsProvider extends ChangeNotifier {
         _todaysBirthday = TodaysBirthdayResult.fromJson(
             jsonData['TBMemberListResult'] as Map<String, dynamic>? ??
                 jsonData);
+        // Apply current user's hide flags from LocalStorage (saved by MyProfileScreen)
+        // since this API doesn't return hide_whatsnum/hide_num/hide_mail.
+        _applyCurrentUserHideFlagsToBirthdays();
         notifyListeners();
         return _todaysBirthday?.isSuccess ?? false;
       }

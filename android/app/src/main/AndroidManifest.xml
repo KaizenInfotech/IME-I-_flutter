@@ -3,6 +3,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
         android:label="IME(I)-iConnect"
         android:name="${applicationName}"
@@ -39,6 +41,12 @@
         <meta-data
             android:name="firebase_messaging_auto_init_enabled"
             android:value="true" />
+        <!-- Default notification channel for Firebase-displayed notifications (Android 8+).
+             Must match the channel ID created in LocalNotificationService.
+             Without this, terminated-state notifications may be silent or not shown. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="IME(I)-iConnect" />
         <meta-data
             android:name="firebase_analytics_collection_enabled"
             android:value="true" />

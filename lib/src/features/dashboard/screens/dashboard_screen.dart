@@ -122,14 +122,57 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
-  /// Android: onResume — refresh notification badge when app comes to foreground.
+  /// Android: onResume — refresh notification badge + check session expiry.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _checkSessionOnResume();
       _refreshNotificationCount();
       // Android: displayNotificationCount — also refresh local unread count
       context.read<NotificationsProvider>().refreshUnreadCount();
     }
+  }
+
+  /// Android: DashboardActivity.checkSessionExpired() called from onResume
+  Future<void> _checkSessionOnResume() async {
+    final groupProvider = context.read<GroupProvider>();
+    final status = await groupProvider.checkSessionExpired();
+    if (status == '2' && mounted) {
+      _showSessionExpiredDialog();
+    }
+  }
+
+  /// Push to a route and check session expiry when returning to dashboard.
+  Future<void> _pushAndCheckSession(String path, {Object? extra}) async {
+    await context.push(path, extra: extra);
+    if (mounted) _checkSessionOnResume();
+  }
+
+  /// Android: sessionExpiredPopup() — non-dismissible dialog
+  void _showSessionExpiredDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: const Text('Your session has been expired.'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await LocalStorage.instance.clearSessionData();
+                await SecureStorage.instance.clearAll();
+                if (mounted) {
+                  context.go('/splash');
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// iOS: PackageInfo → versionTxt.text = "Version: \(verSion)"
@@ -199,6 +242,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     notiProvider.refreshUnreadCount();
 
     CommonLoader.dismiss(context);
+
+    // Android: checkSessionExpired() — check after dashboard fully loads
+    _checkSessionOnResume();
   }
 
   /// iOS: fetchDashboardData — parallel API calls for modules, banners, notifications, assistance.
@@ -402,21 +448,21 @@ class _DashboardScreenState extends State<DashboardScreen>
     switch (index) {
       case 0:
         // iOS: GoverningCouncilViewController — Member/GetGoverningCouncl
-        context.push('/governing-council');
+        _pushAndCheckSession('/governing-council');
         break;
       case 1:
         // iOS: SubCommitteeViewController — FindClub/GetCommitteelist
-        context.push('/sub-committee');
+        _pushAndCheckSession('/sub-committee');
         break;
       case 2:
         // iOS: Branch_ChaptViewController — FindClub/GetClubList
-        context.push('/branch-chapter');
+        _pushAndCheckSession('/branch-chapter');
         break;
       case 3:
         // iOS: FinddArotarianViewControllerers — FindRotarian/GetRotarianList
         LocalStorage.instance
             .setString(AppConstants.keySessionGetModuleId, '27');
-        context.push('/find-member');
+        _pushAndCheckSession('/find-member');
         break;
     }
   }
@@ -426,20 +472,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     switch (index) {
       case 0:
         // iOS: PastPresidentListViewController — PastPresidents/getPastPresidentsList
-        context.push('/past-presidents', extra: {
+        _pushAndCheckSession('/past-presidents', extra: {
           'groupId': LocalStorage.instance.groupId ?? '',
         });
         break;
       case 1:
         // iOS: MERDashViewController — Gallery/GetYear + Gallery/GetMER_List (Type/TransType "1")
-        context.push('/mer', extra: {
+        _pushAndCheckSession('/mer', extra: {
           'type': '1',
           'title': 'MER(I)',
         });
         break;
       case 2:
         // iOS: iMelengaViewController — Gallery/GetYear + Gallery/GetMER_List (Type/TransType "2")
-        context.push('/mer', extra: {
+        _pushAndCheckSession('/mer', extra: {
           'type': '2',
           'title': 'iMelange',
         });
@@ -470,7 +516,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// iOS: eventBtnActn / bannerEventCalendarBtn — Events & Celebrations tap.
   void _onEventsCelebrationsTap() {
-    context.push('/celebrations');
+    _pushAndCheckSession('/celebrations');
   }
 
   /// Android: belliconimg click → ShowNotification.class
@@ -479,6 +525,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     await context.push('/notifications');
     if (mounted) {
       context.read<NotificationsProvider>().refreshUnreadCount();
+      _checkSessionOnResume();
     }
   }
 
@@ -497,6 +544,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         masterUid: storage.masterUid ?? '',
         grpId: storage.groupIdPrimary ?? '',
       );
+      _checkSessionOnResume();
     }
   }
 
@@ -908,7 +956,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: GestureDetector(
                     onTap: () {
                       final storage = LocalStorage.instance;
-                      context.push('/branch-dashboard', extra: {
+                      _pushAndCheckSession('/branch-dashboard', extra: {
                         'branchName': storage.clubName ?? '',
                         'clubName': storage.clubName ?? '',
                       });
@@ -930,7 +978,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 GestureDetector(
                   onTap: () {
                       final storage = LocalStorage.instance;
-                      context.push('/branch-dashboard', extra: {
+                      _pushAndCheckSession('/branch-dashboard', extra: {
                         'branchName': storage.clubName ?? '',
                         'clubName': storage.clubName ?? '',
                       });

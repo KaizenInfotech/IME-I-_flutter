@@ -101,25 +101,30 @@ class _BranchMembersScreenState extends State<BranchMembersScreen> {
 
             // Member list
             Expanded(
-              child: ListView.separated(
-                itemCount: provider.branchMemberDetails.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, index) {
-                  final member = provider.branchMemberDetails[index];
-                  return _MemberListTile(
-                    member: member,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              BranchMemberProfileScreen(member: member),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+              child: provider.branchMemberDetails.isEmpty
+                  ? const EmptyStateWidget(
+                      icon: Icons.person_search,
+                      message: 'No member found',
+                    )
+                  : ListView.separated(
+                      itemCount: provider.branchMemberDetails.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, index) {
+                        final member = provider.branchMemberDetails[index];
+                        return _MemberListTile(
+                          member: member,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    BranchMemberProfileScreen(member: member),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         );

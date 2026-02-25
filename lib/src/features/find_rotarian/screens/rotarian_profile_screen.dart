@@ -183,11 +183,11 @@ class _RotarianProfileScreenState extends State<RotarianProfileScreen> {
 
   /// iOS: 4 action buttons — Call, Message, WhatsApp, Email.
   /// Matching profile.PNG: outlined icons in a row.
+  /// Icons are coloured when hide flag == "1" (visible) and greyed when "0" (hidden).
+  /// If hide flag is null (not in API response), falls back to checking if data exists.
   Widget _buildActionButtons(RotarianDetail detail) {
     final phones = detail.allPhoneNumbers;
     final emails = detail.allEmails;
-    final hasPhone = phones.isNotEmpty;
-    final hasEmail = emails.isNotEmpty;
     // Use whatsapp number if available, else fall back to phone numbers
     final whatsappNumbers = <String>[];
     if (detail.whatsappNum != null && detail.whatsappNum!.trim().isNotEmpty) {
@@ -195,7 +195,22 @@ class _RotarianProfileScreenState extends State<RotarianProfileScreen> {
     } else {
       whatsappNumbers.addAll(phones);
     }
-    final hasWhatsapp = whatsappNumbers.isNotEmpty;
+
+    // Apply hide flag logic: "1" = visible (coloured), "0" = hidden (grey).
+    // For call, SMS, WhatsApp: if EITHER hide_whatsnum or hide_num is "1",
+    // all three phone-related icons are coloured.
+    // If both flags are null, fall back to checking if data exists.
+    final bool hasAnyPhoneFlag =
+        detail.hideWhatsnum != null || detail.hideNum != null;
+    final bool anyPhoneVisible =
+        detail.hideWhatsnum == '1' || detail.hideNum == '1';
+    final bool phoneEnabled =
+        hasAnyPhoneFlag ? anyPhoneVisible : phones.isNotEmpty;
+    final bool whatsappEnabled =
+        hasAnyPhoneFlag ? anyPhoneVisible : whatsappNumbers.isNotEmpty;
+    final bool emailEnabled = detail.hideMail != null
+        ? detail.hideMail == '1'
+        : emails.isNotEmpty;
 
     return Container(
       color: AppColors.white,
@@ -206,7 +221,7 @@ class _RotarianProfileScreenState extends State<RotarianProfileScreen> {
           _ActionButton(
             icon: Icons.call,
             color: AppColors.primary,
-            enabled: hasPhone,
+            enabled: phoneEnabled,
             onTap: () => _showContactPicker(
               items: phones,
               title: 'Select Number',
@@ -217,7 +232,7 @@ class _RotarianProfileScreenState extends State<RotarianProfileScreen> {
           _ActionButton(
             icon: Icons.chat,
             color: Colors.amber.shade700,
-            enabled: hasPhone,
+            enabled: phoneEnabled,
             onTap: () => _showContactPicker(
               items: phones,
               title: 'Select Number',
@@ -228,7 +243,7 @@ class _RotarianProfileScreenState extends State<RotarianProfileScreen> {
           _ActionButton(
             icon: Icons.email,
             color: AppColors.primaryBlue,
-            enabled: hasEmail,
+            enabled: emailEnabled,
             onTap: () => _showContactPicker(
               items: emails,
               title: 'Select Email',
@@ -237,7 +252,7 @@ class _RotarianProfileScreenState extends State<RotarianProfileScreen> {
           ),
           const SizedBox(width: 24),
           _WhatsAppButton(
-            enabled: hasWhatsapp,
+            enabled: whatsappEnabled,
             onTap: () => _showContactPicker(
               items: whatsappNumbers,
               title: 'Select Number',
@@ -351,9 +366,11 @@ class _WhatsAppButton extends StatelessWidget {
         ),
         child: Center(
           child: Image.asset(
-            'assets/images/whatsapp.png',
-            width: 22,
-            height: 22,
+            enabled
+                ? 'assets/images/whatsapp.png'
+                : 'assets/images/whats_grey.png',
+            width: 25,
+            height: 25,
             color: enabled ? null : AppColors.grayMedium,
           ),
         ),
