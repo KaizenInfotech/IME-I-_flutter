@@ -293,46 +293,75 @@ class CelebrationsProvider extends ChangeNotifier {
     }).toList();
   }
 
-  /// Apply current user's hide flags from LocalStorage to BirthdayItem list.
-  /// Same logic as _applyCurrentUserHideFlags but for TodaysBirthdayResult.
-  void _applyCurrentUserHideFlagsToBirthdays() {
-    if (_todaysBirthday?.birthdays == null) return;
-
-    final storage = LocalStorage.instance;
-    final masterUid = storage.masterUid ?? '';
-    final memberProfileId = storage.memberProfileId ?? '';
-    final hideWhatsnum = storage.getString('hide_whatsnum');
-    final hideNum = storage.getString('hide_num');
-    final hideMail = storage.getString('hide_mail');
-
-    if (hideWhatsnum == null && hideNum == null && hideMail == null) return;
-    if (masterUid.isEmpty && memberProfileId.isEmpty) return;
-
-    final idsToMatch = <String>{};
-    if (masterUid.isNotEmpty) {
-      idsToMatch.add(masterUid);
-      idsToMatch.add('M$masterUid');
-    }
-    if (memberProfileId.isNotEmpty) {
-      idsToMatch.add(memberProfileId);
-      idsToMatch.add('M$memberProfileId');
+  /// Fetch hide flags from Member/GetMemberListSync and apply to birthday items.
+  /// Android: DirectoryActivity.getMemberListSyncApi() → processRecords()
+  /// The birthday API doesn't return hide_whatsnum/hide_num/hide_mail,
+  /// so we fetch the full member list (one API call) and match by memberName.
+  Future<void> _fetchHideFlagsForBirthdays(String groupID) async {
+    if (_todaysBirthday?.birthdays == null ||
+        _todaysBirthday!.birthdays!.isEmpty) {
+      return;
     }
 
-    _todaysBirthday = TodaysBirthdayResult(
-      status: _todaysBirthday!.status,
-      message: _todaysBirthday!.message,
-      birthdays: _todaysBirthday!.birthdays!.map((item) {
-        final id = item.profileId;
-        if (id != null && id.isNotEmpty && idsToMatch.contains(id)) {
+    try {
+      final response = await ApiClient.instance.post(
+        ApiConstants.memberGetMemberListSync,
+        body: {
+          'grpID': groupID,
+          'updatedOn': '1970-01-01 00:00:00',
+        },
+      );
+
+      if (response.statusCode != 200) return;
+
+      final jsonData = json.decode(response.body) as Map<String, dynamic>;
+      final status = jsonData['status']?.toString();
+      if (status != '0') return;
+
+      // Android: response.MemberDetail.NewMemberList → array of members
+      final memberDetail =
+          jsonData['MemberDetail'] as Map<String, dynamic>?;
+      final newMemberList =
+          memberDetail?['NewMemberList'] as List<dynamic>?;
+      if (newMemberList == null || newMemberList.isEmpty) return;
+
+      // Build lookup map: memberName → hide flags
+      final hideFlagsMap = <String, Map<String, String>>{};
+      for (final member in newMemberList) {
+        if (member is Map<String, dynamic>) {
+          final name = member['memberName']?.toString() ?? '';
+          if (name.isNotEmpty) {
+            hideFlagsMap[name] = {
+              'hide_whatsnum': member['hide_whatsnum']?.toString() ?? '0',
+              'hide_num': member['hide_num']?.toString() ?? '0',
+              'hide_mail': member['hide_mail']?.toString() ?? '0',
+            };
+          }
+        }
+      }
+
+      // Apply hide flags to birthday items by matching memberName
+      final updatedItems = _todaysBirthday!.birthdays!.map((item) {
+        final name = item.memberName ?? '';
+        if (name.isNotEmpty && hideFlagsMap.containsKey(name)) {
+          final flags = hideFlagsMap[name]!;
           return item.withHideFlags(
-            hideWhatsnum: hideWhatsnum ?? '1',
-            hideNum: hideNum ?? '1',
-            hideMail: hideMail ?? '1',
+            hideWhatsnum: flags['hide_whatsnum']!,
+            hideNum: flags['hide_num']!,
+            hideMail: flags['hide_mail']!,
           );
         }
         return item;
-      }).toList(),
-    );
+      }).toList();
+
+      _todaysBirthday = TodaysBirthdayResult(
+        status: _todaysBirthday!.status,
+        message: _todaysBirthday!.message,
+        birthdays: updatedItems,
+      );
+    } catch (e) {
+      debugPrint('_fetchHideFlagsForBirthdays error: $e');
+    }
   }
 
   // ─── POST Celebrations/GetMonthEventListDetails_National → day-wise details ──
@@ -441,9 +470,9 @@ class CelebrationsProvider extends ChangeNotifier {
         _todaysBirthday = TodaysBirthdayResult.fromJson(
             jsonData['TBMemberListResult'] as Map<String, dynamic>? ??
                 jsonData);
-        // Apply current user's hide flags from LocalStorage (saved by MyProfileScreen)
-        // since this API doesn't return hide_whatsnum/hide_num/hide_mail.
-        _applyCurrentUserHideFlagsToBirthdays();
+        notifyListeners();
+        // Fetch hide flags from FindRotarian/GetrotarianDetails for each member
+        await _fetchHideFlagsForBirthdays(groupID);
         notifyListeners();
         return _todaysBirthday?.isSuccess ?? false;
       }

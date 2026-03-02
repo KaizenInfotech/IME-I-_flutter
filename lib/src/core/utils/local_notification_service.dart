@@ -24,6 +24,10 @@ class LocalNotificationService {
   /// App name shown as notification title — matches Android R.string.app_name
   static const String _appName = 'IME(I)-iConnect';
 
+  /// Set when a notification tap fires before the router is ready (iOS cold start).
+  /// Checked in app.dart after the widget tree is built.
+  static String? pendingNavigationRoute;
+
   bool _initialized = false;
 
   /// Initialize the local notifications plugin.
@@ -52,15 +56,13 @@ class LocalNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // Request Android 13+ (API 33) notification permission at runtime
+    // Android-specific setup
     final androidPlatform =
         _plugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlatform != null) {
-      final granted = await androidPlatform.requestNotificationsPermission();
-      debugPrint('Android notification permission granted: $granted');
-
-      // Create notification channel explicitly for Android 8+ (API 26)
+      // Create notification channel FIRST — this works in background isolate
+      // and must exist before any notification can be shown (Android 8+).
       await androidPlatform.createNotificationChannel(
         const AndroidNotificationChannel(
           _channelId,
@@ -71,6 +73,16 @@ class LocalNotificationService {
           enableVibration: true,
         ),
       );
+
+      // Request Android 13+ (API 33) notification permission at runtime.
+      // This needs an Activity context — will fail in background isolate
+      // when app is killed. Wrap in try-catch so it doesn't block init.
+      try {
+        final granted = await androidPlatform.requestNotificationsPermission();
+        debugPrint('Android notification permission granted: $granted');
+      } catch (e) {
+        debugPrint('Android notification permission request skipped (background isolate): $e');
+      }
     }
 
     // Request iOS notification permissions explicitly
@@ -78,12 +90,16 @@ class LocalNotificationService {
         _plugin.resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>();
     if (iosPlatform != null) {
-      final granted = await iosPlatform.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      debugPrint('iOS local notification permission granted: $granted');
+      try {
+        final granted = await iosPlatform.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        debugPrint('iOS local notification permission granted: $granted');
+      } catch (e) {
+        debugPrint('iOS notification permission request skipped: $e');
+      }
     }
 
     _initialized = true;
@@ -164,8 +180,16 @@ class LocalNotificationService {
   }
 
   /// Handle notification tap — navigate to notifications screen.
+  /// If the router isn't ready yet (iOS cold start from notification),
+  /// save the route for app.dart to pick up after the widget tree builds.
   static void _onNotificationTap(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
-    AppRouter.router.push('/notifications');
+    try {
+      AppRouter.router.push('/notifications');
+    } catch (e) {
+      // Router not ready (cold start) — save for app.dart to handle
+      pendingNavigationRoute = '/notifications';
+      debugPrint('Notification tap deferred (router not ready): $e');
+    }
   }
 }

@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
 import 'src/core/navigation/app_router.dart';
@@ -95,6 +98,9 @@ class _FCMListenerWrapper extends StatefulWidget {
 }
 
 class _FCMListenerWrapperState extends State<_FCMListenerWrapper> {
+  static const _notificationChannel =
+      MethodChannel('com.imeiconnect.touchbase_flutter/notifications');
+
   StreamSubscription<RemoteMessage>? _onMessageSub;
   StreamSubscription<RemoteMessage>? _onMessageOpenedSub;
 
@@ -102,6 +108,7 @@ class _FCMListenerWrapperState extends State<_FCMListenerWrapper> {
   void initState() {
     super.initState();
     _setupFCMListeners();
+    _setupNotificationChannel();
   }
 
   @override
@@ -109,6 +116,71 @@ class _FCMListenerWrapperState extends State<_FCMListenerWrapper> {
     _onMessageSub?.cancel();
     _onMessageOpenedSub?.cancel();
     super.dispose();
+  }
+
+  /// Android MethodChannel: receives navigation intent from native
+  /// MyFirebaseMessagingService → PendingIntent → MainActivity → here.
+  void _setupNotificationChannel() {
+    // Warm start: native side pushes navigateTo when user taps notification
+    // while app is in background
+    _notificationChannel.setMethodCallHandler((call) async {
+      if (call.method == 'navigateTo' && call.arguments == 'notifications') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          AppRouter.router.push('/notifications');
+        });
+      }
+    });
+
+    // Cold start: query native side for pending navigation from notification tap
+    _checkPendingNavigation();
+
+    // iOS cold start: check if a local notification tap launched the app.
+    // Use a delay so the splash → dashboard auth redirect finishes first.
+    if (LocalNotificationService.pendingNavigationRoute != null) {
+      final route = LocalNotificationService.pendingNavigationRoute!;
+      LocalNotificationService.pendingNavigationRoute = null;
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) AppRouter.router.push(route);
+      });
+    }
+
+    // iOS backup: directly ask flutter_local_notifications if a notification
+    // tap launched the app. More reliable than onDidReceiveNotificationResponse
+    // callback which can be lost due to UNUserNotificationCenter delegate conflicts.
+    if (Platform.isIOS) {
+      _checkLocalNotificationLaunch();
+    }
+  }
+
+  /// iOS: check if app was launched by tapping a local notification.
+  Future<void> _checkLocalNotificationLaunch() async {
+    try {
+      final details = await FlutterLocalNotificationsPlugin()
+          .getNotificationAppLaunchDetails();
+      if (details?.didNotificationLaunchApp == true && mounted) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) AppRouter.router.push('/notifications');
+        });
+      }
+    } catch (e) {
+      debugPrint('Check local notification launch: $e');
+    }
+  }
+
+  /// Android cold start: check if MainActivity has a pending navigation
+  /// from the notification PendingIntent that launched the app.
+  Future<void> _checkPendingNavigation() async {
+    try {
+      final pending = await _notificationChannel
+          .invokeMethod<String>('getPendingNavigation');
+      if (pending == 'notifications' && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          AppRouter.router.push('/notifications');
+        });
+      }
+    } catch (e) {
+      debugPrint('Check pending navigation: $e');
+    }
   }
 
   /// Android: MyFirebaseMessagingService.onMessageReceived (foreground)
@@ -148,9 +220,11 @@ class _FCMListenerWrapperState extends State<_FCMListenerWrapper> {
               payload['eventTitle']?.toString() ??
               payload['entityName']?.toString() ??
               'TouchBase';
-          final notiBody = payload['Message']?.toString() ??
-              payload['eventDesc']?.toString() ??
-              '';
+          final notiBody = (payload['Message']?.toString() ??
+                  payload['eventDesc']?.toString() ??
+                  '')
+              .replaceAll(RegExp(r'<[^>]*>'), '')
+              .trim();
           if (notiBody.isNotEmpty) {
             LocalNotificationService.instance.showNotification(
               title: notiTitle,
@@ -183,14 +257,15 @@ class _FCMListenerWrapperState extends State<_FCMListenerWrapper> {
         });
       });
 
-      // Check if app was opened from a terminated state via notification
+      // Check if app was opened from a terminated state via notification.
+      // Use a delay so the splash → dashboard auth redirect finishes first.
       FirebaseMessaging.instance
           .getInitialMessage()
           .then((RemoteMessage? message) {
         if (message != null) {
           debugPrint('FCM getInitialMessage: ${message.messageId}');
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            AppRouter.router.push('/notifications');
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) AppRouter.router.push('/notifications');
           });
         }
       });

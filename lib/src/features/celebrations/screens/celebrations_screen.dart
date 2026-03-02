@@ -193,9 +193,10 @@ class _CelebrationsScreenState extends State<CelebrationsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Icon(
-                      _showCalendar
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
+                      Icons.calendar_month,
+                      // _showCalendar
+                      //     ? Icons.keyboard_arrow_up
+                      //     : Icons.keyboard_arrow_down,
                       color: AppColors.textOnPrimary,
                       size: 20,
                     ),

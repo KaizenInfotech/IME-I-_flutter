@@ -49,11 +49,7 @@ class NotificationItem {
     }
 
     final message = (json['Message'] as String?) ?? '';
-    return message
-        .replaceAll('<br />', '')
-        .replaceAll('<br>', '')
-        .replaceAll('<p>', '')
-        .replaceAll('</p>', '');
+    return message.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
   /// Extract entity name from details JSON.

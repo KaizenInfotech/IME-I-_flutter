@@ -12,7 +12,7 @@ import 'src/core/storage/secure_storage.dart';
 import 'src/core/utils/local_notification_service.dart';
 import 'src/features/notifications/providers/notifications_provider.dart';
 
-/// Android: MyFirebaseMessagingService.onMessageReceived — background handler.
+/// Background handler for FCM messages.
 /// Must be a top-level function (not a class method).
 /// IMPORTANT: On Android this runs in a SEPARATE Dart isolate — Flutter
 /// binding and all plugins must be initialized from scratch.
@@ -43,41 +43,30 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 
   payload['gcm.message_id'] ??=
-      message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString();  
+      message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
   if (payload.isEmpty) return;
 
-  // Save notification to local DB (non-critical — don't let DB failure block notification display)
-  try {
-    await DatabaseHelper.instance.init();
-    final provider = NotificationsProvider();
-    await provider.handlePushNotification(payload);
-  } catch (e) {
-    debugPrint('FCM background: DB save failed (non-fatal): $e');
-  }
-
-  // Always init LocalNotificationService — creates the Android notification
-  // channel (IME(I)-iConnect) which must exist for system-displayed notifications.
-  try {
-    await LocalNotificationService.instance.init();
-  } catch (e) {
-    debugPrint('FCM background: LocalNotificationService init failed: $e');
-  }
-
-  // Show local notification banner.
-  // For data-only messages: the OS does NOT auto-display, so we must show it.
-  // For notification+data messages: the OS auto-displays on Android, but only
-  // if the notification channel exists and icon is valid — show as fallback
-  // to guarantee the user sees the notification.
+  // Extract and clean notification text
   final title = payload['title']?.toString() ??
       payload['eventTitle']?.toString() ??
       payload['entityName']?.toString() ??
       'TouchBase';
-  final body = payload['Message']?.toString() ??
-      payload['eventDesc']?.toString() ??
-      '';
-  if (body.isNotEmpty) {
+  final body = (payload['Message']?.toString() ??
+          payload['eventDesc']?.toString() ??
+          '')
+      .replaceAll(RegExp(r'<[^>]*>'), '')
+      .trim();
+
+  // Show notification banner — on Android the native MyFirebaseMessagingService
+  // already shows notifications, so only show here for iOS to avoid duplicates.
+  // On iOS the background handler runs in the MAIN isolate, so use the
+  // LocalNotificationService singleton which has the tap callback registered
+  // (navigates to /notifications). Using a standalone plugin instance would
+  // override the tap callback and break tap-to-navigate.
+  if (body.isNotEmpty && Platform.isIOS) {
     try {
+      await LocalNotificationService.instance.init(); // no-op if already initialized
       await LocalNotificationService.instance.showNotification(
         title: title,
         body: body,
@@ -86,6 +75,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     } catch (e) {
       debugPrint('FCM background: show notification failed: $e');
     }
+  }
+
+  // Save notification to local DB (non-critical — don't let DB failure block)
+  try {
+    await DatabaseHelper.instance.init();
+    final provider = NotificationsProvider();
+    await provider.handlePushNotification(payload);
+  } catch (e) {
+    debugPrint('FCM background: DB save failed (non-fatal): $e');
   }
 }
 

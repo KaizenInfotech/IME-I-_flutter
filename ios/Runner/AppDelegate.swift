@@ -8,16 +8,20 @@ import FirebaseMessaging
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Required for flutter_local_notifications to show banners in foreground
-    if #available(iOS 10.0, *) {
-      UNUserNotificationCenter.current().delegate = self
-    }
-
     // Explicitly register for remote notifications — critical for TestFlight/production.
     // In debug, method swizzling handles this, but release builds may fail silently.
     application.registerForRemoteNotifications()
 
     GeneratedPluginRegistrant.register(with: self)
+
+    // Set UNUserNotificationCenter delegate AFTER plugin registration so that
+    // firebase_messaging can't override it. FlutterAppDelegate forwards
+    // delegate calls to all registered plugins (flutter_local_notifications
+    // needs this for notification tap callbacks).
+    if #available(iOS 10.0, *) {
+      UNUserNotificationCenter.current().delegate = self
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
